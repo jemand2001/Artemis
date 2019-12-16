@@ -18,6 +18,9 @@ import de.tum.in.www1.artemis.domain.enumeration.AssessmentType;
 import de.tum.in.www1.artemis.domain.enumeration.DifficultyLevel;
 import de.tum.in.www1.artemis.domain.enumeration.InitializationState;
 import de.tum.in.www1.artemis.domain.modeling.ModelingExercise;
+import de.tum.in.www1.artemis.domain.participation.Participation;
+import de.tum.in.www1.artemis.domain.participation.StudentParticipation;
+import de.tum.in.www1.artemis.domain.participation.TutorParticipation;
 import de.tum.in.www1.artemis.domain.quiz.QuizExercise;
 import de.tum.in.www1.artemis.domain.quiz.QuizSubmission;
 import de.tum.in.www1.artemis.domain.view.QuizView;
@@ -567,6 +570,14 @@ public abstract class Exercise implements Serializable {
     public void filterForCourseDashboard(List<StudentParticipation> participations, String username, boolean isStudent) {
         // remove the unnecessary inner course attribute
         setCourse(null);
+
+        // remove the problem statement, which is loaded in the exercise details call
+        setProblemStatement(null);
+
+        if (this instanceof ProgrammingExercise) {
+            var programmingExercise = (ProgrammingExercise) this;
+            programmingExercise.setTestRepositoryUrl(null);
+        }
 
         // get user's participation for the exercise
         StudentParticipation participation = participations != null ? findRelevantParticipation(participations) : null;

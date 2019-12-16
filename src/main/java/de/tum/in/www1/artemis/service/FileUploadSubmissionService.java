@@ -2,6 +2,7 @@ package de.tum.in.www1.artemis.service;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.Principal;
 import java.time.ZonedDateTime;
@@ -11,6 +12,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,8 @@ import de.tum.in.www1.artemis.domain.*;
 import de.tum.in.www1.artemis.domain.enumeration.AssessmentType;
 import de.tum.in.www1.artemis.domain.enumeration.InitializationState;
 import de.tum.in.www1.artemis.domain.enumeration.SubmissionType;
+import de.tum.in.www1.artemis.domain.participation.StudentParticipation;
+import de.tum.in.www1.artemis.exception.EmptyFileException;
 import de.tum.in.www1.artemis.repository.FileUploadSubmissionRepository;
 import de.tum.in.www1.artemis.repository.ResultRepository;
 import de.tum.in.www1.artemis.repository.StudentParticipationRepository;
@@ -71,10 +75,11 @@ public class FileUploadSubmissionService extends SubmissionService {
      * @param principal            the user principal
      * @return the saved file upload submission
      * @throws IOException if file can't be saved
+     * @throws EmptyFileException if file is empty
      */
     @Transactional
     public FileUploadSubmission handleFileUploadSubmission(FileUploadSubmission fileUploadSubmission, MultipartFile file, FileUploadExercise fileUploadExercise,
-            Principal principal) throws IOException {
+            Principal principal) throws IOException, EmptyFileException {
         Optional<StudentParticipation> optionalParticipation = participationService.findOneByExerciseIdAndStudentLoginAnyState(fileUploadExercise.getId(), principal.getName());
         if (optionalParticipation.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "No participation found for " + principal.getName() + " in exercise " + fileUploadExercise.getId());
@@ -114,6 +119,7 @@ public class FileUploadSubmissionService extends SubmissionService {
         // We take all the results in this exercise associated to the tutor, and from there we retrieve the submissions
         List<Result> results = this.resultRepository.findAllByParticipationExerciseIdAndAssessorId(exerciseId, tutorId);
 
+        // TODO: properly load the submissions with all required data from the database without using @Transactional
         return results.stream().map(result -> {
             Submission submission = result.getSubmission();
             FileUploadSubmission fileUploadSubmission = new FileUploadSubmission();
@@ -162,7 +168,7 @@ public class FileUploadSubmissionService extends SubmissionService {
         if (submission.getParticipation() != null) {
             submission.getParticipation().addResult(result);
         }
-        resultRepository.save(result);
+        result = resultRepository.save(result);
         fileUploadSubmissionRepository.save(submission);
         return result;
     }
@@ -176,18 +182,33 @@ public class FileUploadSubmissionService extends SubmissionService {
      * @param exercise             the exercise the submission belongs to
      * @return the fileUploadSubmission entity that was saved to the database
      * @throws IOException if file can't be saved
+     * @throws EmptyFileException if file is empty
      */
-    @Transactional(rollbackFor = Exception.class)
     public FileUploadSubmission save(FileUploadSubmission fileUploadSubmission, MultipartFile file, StudentParticipation participation, FileUploadExercise exercise)
-            throws IOException {
+            throws IOException, EmptyFileException {
         final var exerciseDueDate = exercise.getDueDate();
         if (exerciseDueDate != null && exerciseDueDate.isBefore(ZonedDateTime.now()) && participation.getInitializationDate().isBefore(exerciseDueDate)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
+        if (file.isEmpty()) {
+            throw new EmptyFileException(file.getOriginalFilename());
+        }
+
+        final var multipartFileHash = DigestUtils.md5Hex(file.getInputStream());
+        // We need to set id for newly created submissions
+        if (fileUploadSubmission.getId() == null) {
+            fileUploadSubmission = fileUploadSubmissionRepository.save(fileUploadSubmission);
+        }
+        final var localPath = saveFileForSubmission(file, fileUploadSubmission, exercise);
+
+        // We need to ensure that we can access the store file and the stored file is the same as was passed to us in the request
+        final var storedFileHash = DigestUtils.md5Hex(Files.newInputStream(Path.of(localPath)));
+        if (!multipartFileHash.equals(storedFileHash)) {
+            throw new IOException("The file " + file.getName() + "could not be stored");
+        }
+
         // check if we already had file associated with this submission
         fileUploadSubmission.onDelete();
-
-        final var localPath = saveFileForSubmission(file, fileUploadSubmission, exercise);
 
         // update submission properties
         fileUploadSubmission.setSubmissionDate(ZonedDateTime.now());
@@ -261,7 +282,7 @@ public class FileUploadSubmissionService extends SubmissionService {
         }
 
         result.setAssessmentType(AssessmentType.MANUAL);
-        resultRepository.save(result);
+        result = resultRepository.save(result);
         log.debug("Assessment locked with result id: " + result.getId() + " for assessor: " + result.getAssessor().getFirstName());
     }
 

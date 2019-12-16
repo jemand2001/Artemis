@@ -2,13 +2,13 @@
     "artemisApp": {
         "fileUploadAssessment": {
             "editorTitle": "Assessment Editor for File Upload Exercise {{ title }}",
-            "submissionFile": "Submission File",
+            "submissionFile": "Download Submission File",
             "notFound": "We haven't found any new file upload submission without an assessment, please go back.",
             "addFeedback": "Add new Feedback",
             "assessInstruction": "Please, click the \"Add new Feedback\" button.",
             "deleteAssessment": "Delete Assessment {{ index }} ?",
             "dashboard": {
-                "heading": "Tutor Assessment dashboard for file upload exercise \"{{exerciseTitle}}\""
+                "heading": "Submissions and assessments of file upload exercise \"{{exerciseTitle}}\""
             },
             "error": {
                 "invalidAssessments": "Your assessments are not valid!",

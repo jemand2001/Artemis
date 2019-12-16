@@ -1,14 +1,13 @@
 package de.tum.in.www1.artemis.config.websocket;
 
 import java.security.Principal;
-import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
+import javax.validation.constraints.NotNull;
 
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +20,7 @@ import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.scheduling.TaskScheduler;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.socket.WebSocketHandler;
@@ -48,28 +47,8 @@ public class WebsocketConfiguration extends WebSocketMessageBrokerConfigurationS
 
     private WebSocketMessageBrokerStats webSocketMessageBrokerStats;
 
-    // TODO: remove again
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
-    private ThreadPoolTaskExecutor inboundChannelExecutor;
-
-    private ThreadPoolTaskExecutor outboundChannelExecutor;
-
-    private static final int SCHEDULER_PERIOD = 60 * 1000;
-
     public WebsocketConfiguration(MappingJackson2HttpMessageConverter springMvcJacksonConverter) {
         this.objectMapper = springMvcJacksonConverter.getObjectMapper();
-        // TODO: remove again
-        scheduler.scheduleAtFixedRate(() -> {
-            if (inboundChannelExecutor != null && outboundChannelExecutor != null) {
-                log.info("inboundChannelExecutor: " + inboundChannelExecutor.getThreadPoolExecutor().getKeepAliveTime(TimeUnit.SECONDS) + "s, "
-                        + inboundChannelExecutor.getThreadPoolExecutor().getQueue().size() + ", " + inboundChannelExecutor.getThreadPoolExecutor().getQueue().remainingCapacity()
-                        + "; " + "outboundChannelExecutor: " + outboundChannelExecutor.getThreadPoolExecutor().getKeepAliveTime(TimeUnit.SECONDS) + "s, "
-                        + outboundChannelExecutor.getThreadPoolExecutor().getQueue().size() + ", "
-                        + outboundChannelExecutor.getThreadPoolExecutor().getQueue().remainingCapacity());
-            }
-
-        }, SCHEDULER_PERIOD, SCHEDULER_PERIOD, TimeUnit.MILLISECONDS);
     }
 
     @PostConstruct
@@ -77,7 +56,14 @@ public class WebsocketConfiguration extends WebSocketMessageBrokerConfigurationS
         // using Autowired leads to a weird bug, because the order of the method execution is changed. This somehow prevents messages send to single clients
         // later one, e.g. in the code editor. Therefore we call this method here directly to get a reference and adapt the logging period!
         webSocketMessageBrokerStats = webSocketMessageBrokerStats();
-        webSocketMessageBrokerStats.setLoggingPeriod(5 * 1000);
+        webSocketMessageBrokerStats.setLoggingPeriod(10 * 1000);
+    }
+
+    @Scheduled(fixedDelay = 10 * 1000)
+    public void logSubscriptions() {
+        final var subscriptionCount = userRegistry().getUsers().stream().flatMap(simpUser -> simpUser.getSessions().stream())
+                .map(simpSession -> simpSession.getSubscriptions().size()).reduce(0, Integer::sum);
+        log.info("Currently active websocket subscriptions: " + subscriptionCount);
     }
 
     @Autowired
@@ -87,9 +73,9 @@ public class WebsocketConfiguration extends WebSocketMessageBrokerConfigurationS
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic").setHeartbeatValue(new long[] { 25000, 25000 }).setTaskScheduler(messageBrokerTaskScheduler);
+        config.enableSimpleBroker("/topic").setHeartbeatValue(new long[] { 10000, 20000 }).setTaskScheduler(messageBrokerTaskScheduler);
         // increase the limit of concurrent connections (default is 1024 which is much too low)
-        config.setCacheLimit(10000);
+        // config.setCacheLimit(10000);
     }
 
     @Override
@@ -98,27 +84,8 @@ public class WebsocketConfiguration extends WebSocketMessageBrokerConfigurationS
         // NOTE: by setting a WebSocketTransportHandler we disable http poll, http stream and other exotic workarounds and only support real websocket connections.
         // nowadays all modern browsers support websockets and workarounds are not necessary any more and might only lead to problems
         WebSocketTransportHandler webSocketTransportHandler = new WebSocketTransportHandler(handshakeHandler);
-        registry.addEndpoint("/websocket/tracker")
-                // Override this value due to warnings in the logs: o.s.w.s.s.t.h.DefaultSockJsService : Origin check enabled but transport 'jsonp' does not support it.
-                .setAllowedOrigins("*").withSockJS().setTransportHandlers(webSocketTransportHandler).setInterceptors(httpSessionHandshakeInterceptor());
-    }
-
-    // TODO: allow to customize these settings via application.yml file
-
-    @Override
-    public ThreadPoolTaskExecutor clientOutboundChannelExecutor() {
-        outboundChannelExecutor = super.clientOutboundChannelExecutor();
-        outboundChannelExecutor.setQueueCapacity(100 * 1000);
-        outboundChannelExecutor.setKeepAliveSeconds(10);
-        return outboundChannelExecutor;
-    }
-
-    @Override
-    public ThreadPoolTaskExecutor clientInboundChannelExecutor() {
-        inboundChannelExecutor = super.clientInboundChannelExecutor();
-        inboundChannelExecutor.setQueueCapacity(100 * 1000);
-        inboundChannelExecutor.setKeepAliveSeconds(10);
-        return inboundChannelExecutor;
+        registry.addEndpoint("/websocket/tracker").setAllowedOrigins("*").withSockJS().setTransportHandlers(webSocketTransportHandler)
+                .setInterceptors(httpSessionHandshakeInterceptor());
     }
 
     @NotNull

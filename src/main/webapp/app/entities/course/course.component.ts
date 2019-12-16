@@ -7,6 +7,8 @@ import { CourseService } from './course.service';
 import { ARTEMIS_DEFAULT_COLOR } from 'app/app.constants';
 import { GuidedTourService } from 'app/guided-tour/guided-tour.service';
 import { courseAdministrationTour } from 'app/guided-tour/tours/course-administration-tour';
+import { onError } from 'app/utils/global.utils';
+import { Subject } from 'rxjs';
 
 @Component({
     selector: 'jhi-course',
@@ -20,6 +22,9 @@ export class CourseComponent implements OnInit, OnDestroy {
 
     courses: Course[];
     eventSubscriber: Subscription;
+
+    private dialogErrorSource = new Subject<string>();
+    dialogError$ = this.dialogErrorSource.asObservable();
 
     readonly ARTEMIS_DEFAULT_COLOR = ARTEMIS_DEFAULT_COLOR;
 
@@ -42,7 +47,7 @@ export class CourseComponent implements OnInit, OnDestroy {
                 this.courses = res.body!;
                 this.courseForGuidedTour = this.guidedTourService.enableTourForCourseOverview(this.courses, courseAdministrationTour);
             },
-            (res: HttpErrorResponse) => this.onError(res),
+            (res: HttpErrorResponse) => onError(this.jhiAlertService, res),
         );
     }
 
@@ -53,6 +58,7 @@ export class CourseComponent implements OnInit, OnDestroy {
 
     ngOnDestroy() {
         this.eventManager.destroy(this.eventSubscriber);
+        this.dialogErrorSource.unsubscribe();
     }
 
     trackId(index: number, item: Course) {
@@ -74,13 +80,10 @@ export class CourseComponent implements OnInit, OnDestroy {
                     name: 'courseListModification',
                     content: 'Deleted an course',
                 });
+                this.dialogErrorSource.next('');
             },
-            error => this.onError(error),
+            (error: HttpErrorResponse) => this.dialogErrorSource.next(error.message),
         );
-    }
-
-    private onError(error: HttpErrorResponse) {
-        this.jhiAlertService.error(error.message);
     }
 
     callback() {}

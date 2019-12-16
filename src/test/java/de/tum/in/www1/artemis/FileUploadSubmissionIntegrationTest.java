@@ -2,6 +2,8 @@ package de.tum.in.www1.artemis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -22,8 +24,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import de.tum.in.www1.artemis.domain.Feedback;
 import de.tum.in.www1.artemis.domain.FileUploadExercise;
 import de.tum.in.www1.artemis.domain.FileUploadSubmission;
-import de.tum.in.www1.artemis.domain.StudentParticipation;
 import de.tum.in.www1.artemis.domain.modeling.ModelingSubmission;
+import de.tum.in.www1.artemis.domain.participation.StudentParticipation;
 import de.tum.in.www1.artemis.repository.*;
 import de.tum.in.www1.artemis.service.FileService;
 import de.tum.in.www1.artemis.service.ParticipationService;
@@ -106,7 +108,18 @@ public class FileUploadSubmissionIntegrationTest {
         String publicFilePath = fileService.publicPathForActualPath(actualFilePath, returnedSubmission.getId());
         assertThat(returnedSubmission).as("submission correctly posted").isNotNull();
         assertThat(returnedSubmission.getFilePath()).isEqualTo(publicFilePath);
+        var fileBytes = Files.readAllBytes(Path.of(actualFilePath));
+        assertThat(fileBytes.length > 0).as("Stored file has content").isTrue();
         checkDetailsHidden(returnedSubmission, true);
+    }
+
+    @Test
+    @WithMockUser(value = "student3")
+    public void submitFileUploadSubmission_emptyFileContent() throws Exception {
+        FileUploadSubmission submission = ModelFactory.generateFileUploadSubmission(false);
+        var file = new MockMultipartFile("file", "file.png", "application/json", (byte[]) null);
+        request.postWithMultipartFile("/api/exercises/" + fileUploadExercise.getId() + "/file-upload-submissions", submission, "submission", file, FileUploadSubmission.class,
+                HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -119,7 +132,7 @@ public class FileUploadSubmissionIntegrationTest {
     }
 
     @Test
-    @WithMockUser(value = "tutor1", roles = "TA")
+    @WithMockUser(username = "instructor1", roles = "INSTRUCTOR")
     public void getAllSubmissionsOfExercise() throws Exception {
         FileUploadSubmission submission1 = database.addFileUploadSubmission(fileUploadExercise, notSubmittedFileUploadSubmission, "student1");
         FileUploadSubmission submission2 = database.addFileUploadSubmission(fileUploadExercise, submittedFileUploadSubmission, "student2");
@@ -133,9 +146,9 @@ public class FileUploadSubmissionIntegrationTest {
     @Test
     @WithMockUser(value = "tutor1", roles = "TA")
     public void cannotSeeStudentDetailsInSubmissionListAsTutor() throws Exception {
-        FileUploadSubmission submission1 = database.addFileUploadSubmission(fileUploadExercise, submittedFileUploadSubmission, "student1");
+        FileUploadSubmission submission1 = database.addFileUploadSubmissionWithResultAndAssessor(fileUploadExercise, submittedFileUploadSubmission, "student1", "tutor1");
 
-        List<FileUploadSubmission> submissions = request.getList("/api/exercises/" + fileUploadExercise.getId() + "/file-upload-submissions?submittedOnly=true", HttpStatus.OK,
+        List<FileUploadSubmission> submissions = request.getList("/api/exercises/" + fileUploadExercise.getId() + "/file-upload-submissions?assessedByTutor=true", HttpStatus.OK,
                 FileUploadSubmission.class);
 
         assertThat(submissions.size()).as("one file upload submission was found").isEqualTo(1);
@@ -167,7 +180,7 @@ public class FileUploadSubmissionIntegrationTest {
     }
 
     @Test
-    @WithMockUser(value = "tutor1", roles = "TA")
+    @WithMockUser(username = "instructor1", roles = "INSTRUCTOR")
     public void getAllSubmittedSubmissionsOfExercise() throws Exception {
         FileUploadSubmission submission1 = database.addFileUploadSubmission(fileUploadExercise, submittedFileUploadSubmission, "student1");
         database.addFileUploadSubmission(fileUploadExercise, notSubmittedFileUploadSubmission, "student2");

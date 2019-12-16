@@ -1,6 +1,6 @@
 import * as $ from 'jquery';
 
-import { AfterViewInit, Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { JhiAlertService } from 'ng-jhipster';
@@ -30,6 +30,7 @@ import { filter } from 'rxjs/operators';
     templateUrl: './example-text-submission.component.html',
     providers: [JhiAlertService],
     styleUrls: ['./example-text-submission.component.scss'],
+    encapsulation: ViewEncapsulation.None,
 })
 export class ExampleTextSubmissionComponent implements OnInit, AfterViewInit {
     isNewSubmission: boolean;

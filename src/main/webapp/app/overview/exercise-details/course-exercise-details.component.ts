@@ -83,9 +83,24 @@ export class CourseExerciseDetailsComponent implements OnInit, OnDestroy {
         });
     }
 
+    ngOnDestroy() {
+        if (this.participationUpdateListener) {
+            this.participationUpdateListener.unsubscribe();
+            if (this.studentParticipation) {
+                this.participationWebsocketService.unsubscribeForLatestResultOfParticipation(this.studentParticipation.id);
+            }
+        }
+    }
+
     loadExercise() {
         this.exercise = null;
         this.studentParticipation = this.participationWebsocketService.getParticipationForExercise(this.exerciseId);
+        // TODO: we should refactor this because we are sending multiple requests to the server. It would be better to create a new REST call for exercise details including:
+        // * the exercise (without the course, no template / solution participations)
+        // * all submissions (with their result) of the user (to be displayed in the result history)
+        // * the student questions
+        // * the hints
+        // --> The retrieved data then needs to be passed correctly into the sub components
         if (this.studentParticipation) {
             // we only need to update the exercise itself, because we have already have the latest participation
             this.exerciseService.find(this.exerciseId).subscribe((exerciseResponse: HttpResponse<Exercise>) => {
@@ -93,8 +108,7 @@ export class CourseExerciseDetailsComponent implements OnInit, OnDestroy {
             });
         } else {
             // we do not have a participation, so we need to load it with the exercise
-            // TODO: also include submissions
-            this.exerciseService.findResultsForExercise(this.exerciseId).subscribe((exerciseResponse: HttpResponse<Exercise>) => {
+            this.exerciseService.getExerciseDetails(this.exerciseId).subscribe((exerciseResponse: HttpResponse<Exercise>) => {
                 this.handleNewExercise(exerciseResponse.body!);
             });
         }
@@ -136,12 +150,6 @@ export class CourseExerciseDetailsComponent implements OnInit, OnDestroy {
     private sortParticipationsFinishedFirst(participations: StudentParticipation[]) {
         if (participations && participations.length > 1) {
             participations.sort((a, b) => (b.initializationState === InitializationState.FINISHED ? 1 : -1));
-        }
-    }
-
-    ngOnDestroy() {
-        if (this.participationUpdateListener) {
-            this.participationUpdateListener.unsubscribe();
         }
     }
 
