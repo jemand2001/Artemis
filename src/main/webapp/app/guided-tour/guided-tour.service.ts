@@ -486,19 +486,27 @@ export class GuidedTourService {
 
             if (userInteraction === UserInteractionEvent.CLICK) {
                 /** This can be used if a checkbox has to be clicked that displays a certain element for the next tour step */
-                if (currentStep.checkForNextSelector) {
+                if (currentStep.checkForNextStepSelector) {
                     if (nextStep.highlightSelector && document.querySelector(nextStep.highlightSelector)) {
                         this.enableNextStepClick();
                     }
                     /** The DOM mutation on the click event listener triggers the enableNextStepClick() call */
                     this.observeMutations(targetNode, options).subscribe(() => {
-                        if (currentStep.checkForNextSelector && nextStep.highlightSelector && document.querySelector(nextStep.highlightSelector) === null) {
+                        if (currentStep.checkForNextStepSelector && nextStep.highlightSelector && document.querySelector(nextStep.highlightSelector) === null) {
                             this.disableNextStepClick();
                         } else {
                             this.enableNextStepClick();
                             if (currentStep.triggerNextStep) {
                                 this.nextStep();
                             }
+                        }
+                    });
+                } else if (currentStep.isCheckbox) {
+                    this.observeMutations(targetNode, options).subscribe(() => {
+                        if (document.querySelector('#field_showFinishedExercise:checked') === null) {
+                            this.disableNextStepClick();
+                        } else {
+                            this.enableNextStepClick();
                         }
                     });
                 } else {

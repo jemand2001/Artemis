@@ -70,7 +70,9 @@ export class UserInterActionTourStep extends TextTourStep {
     /** Enables the automatic display of the next step after a user interaction */
     triggerNextStep?: boolean;
     /** Check for next selector*/
-    checkForNextSelector?: boolean;
+    checkForNextStepSelector?: boolean;
+    /** isCheckbox **/
+    isCheckbox?: boolean;
 
     constructor(tourStep: UserInterActionTourStep) {
         super(tourStep);
