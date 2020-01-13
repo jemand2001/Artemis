@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { partition } from 'lodash';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Course, CourseService } from '../entities/course';
+import { Course } from '../entities/course';
+import { CourseService } from 'app/entities/course/course.service';
 import { JhiAlertService } from 'ng-jhipster';
-import { User } from '../core';
+import { User } from 'app/core';
 import { AccountService } from 'app/core/auth/account.service';
 import { HttpResponse } from '@angular/common/http';
-import { Exercise, getIcon, getIconTooltip } from 'app/entities/exercise';
+import { Exercise, getIcon, getIconTooltip } from 'app/entities/exercise/exercise.model';
 import { StatsForDashboard } from 'app/instructor-course-dashboard/stats-for-dashboard.model';
 import { GuidedTourService } from 'app/guided-tour/guided-tour.service';
 import { tutorCourseDashboardTour } from 'app/guided-tour/tours/tutor-dashboard-tour';

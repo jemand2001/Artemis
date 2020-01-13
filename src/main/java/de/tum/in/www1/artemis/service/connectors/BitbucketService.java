@@ -12,6 +12,7 @@ import javax.validation.constraints.NotNull;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.*;
@@ -26,14 +27,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 
 import de.tum.in.www1.artemis.domain.*;
-import de.tum.in.www1.artemis.domain.participation.ProgrammingExerciseParticipation;
 import de.tum.in.www1.artemis.exception.BitbucketException;
 import de.tum.in.www1.artemis.service.UserService;
+import de.tum.in.www1.artemis.service.connectors.bitbucket.dto.BitbucketBranchProtectionDTO;
 import de.tum.in.www1.artemis.web.rest.util.HeaderUtil;
 
 @Service
 @Profile("bitbucket")
-public class BitbucketService implements VersionControlService {
+public class BitbucketService extends AbstractVersionControlService {
 
     private static final int MAX_FORK_RETRIES = 5;
 
@@ -50,7 +51,7 @@ public class BitbucketService implements VersionControlService {
     @Value("${artemis.version-control.user}")
     private String BITBUCKET_USER;
 
-    @Value("${artemis.version-control.secret}")
+    @Value("${artemis.version-control.password}")
     private String BITBUCKET_PASSWORD;
 
     @Value("${artemis.lti.user-prefix-edx}")
@@ -66,7 +67,7 @@ public class BitbucketService implements VersionControlService {
 
     private final RestTemplate restTemplate;
 
-    public BitbucketService(UserService userService, RestTemplate restTemplate) {
+    public BitbucketService(UserService userService, @Qualifier("bitbucketRestTemplate") RestTemplate restTemplate) {
         this.userService = userService;
         this.restTemplate = restTemplate;
     }
@@ -113,28 +114,14 @@ public class BitbucketService implements VersionControlService {
         log.debug("Setting up branch protection for repository " + repositorySlug);
 
         // Payload according to https://docs.atlassian.com/bitbucket-server/rest/4.2.0/bitbucket-ref-restriction-rest.html
-        HashMap<String, Object> matcher = new HashMap<>();
-
+        final var type = new BitbucketBranchProtectionDTO.TypeDTO("PATTERN", "Pattern");
         // A wildcard (*) ist used to protect all branches
-        matcher.put("displayId", "*");
-        matcher.put("id", "*");
-        HashMap<String, Object> type = new HashMap<>();
-        type.put("id", "PATTERN");
-        type.put("name", "Pattern");
-        matcher.put("type", type);
-        matcher.put("active", true);
-
-        HashMap<String, Object> fastForwardOnlyType = new HashMap<>();
-        fastForwardOnlyType.put("type", "fast-forward-only"); // Prevent force-pushes
-        fastForwardOnlyType.put("matcher", matcher);
-
-        HashMap<String, Object> noDeletesType = new HashMap<>();
-        noDeletesType.put("type", "no-deletes"); // Prevent deletion of branches
-        noDeletesType.put("matcher", matcher);
-
-        List<Object> body = new ArrayList<>();
-        body.add(fastForwardOnlyType);
-        body.add(noDeletesType);
+        final var matcher = new BitbucketBranchProtectionDTO.MatcherDTO("*", "*", type, true);
+        // Prevent force-pushes
+        final var fastForwardOnlyProtection = new BitbucketBranchProtectionDTO("fast-forward-only", matcher);
+        // Prevent deletion of branches
+        final var noDeletesProtection = new BitbucketBranchProtectionDTO("no-deletes", matcher);
+        final var body = List.of(fastForwardOnlyProtection, noDeletesProtection);
 
         HttpHeaders headers = HeaderUtil.createAuthorization(BITBUCKET_USER, BITBUCKET_PASSWORD);
         headers.setContentType(new MediaType("application", "vnd.atl.bitbucket.bulk+json")); // Set content-type manually as required by Bitbucket
@@ -150,10 +137,16 @@ public class BitbucketService implements VersionControlService {
     }
 
     @Override
-    public void addWebHook(URL repositoryUrl, String notificationUrl, String webHookName) {
+    protected void addWebHook(URL repositoryUrl, String notificationUrl, String webHookName) {
         if (!webHookExists(getProjectKeyFromUrl(repositoryUrl), getRepositorySlugFromUrl(repositoryUrl))) {
             createWebHook(getProjectKeyFromUrl(repositoryUrl), getRepositorySlugFromUrl(repositoryUrl), notificationUrl, webHookName);
         }
+    }
+
+    @Override
+    protected void addAuthenticatedWebHook(URL repositoryUrl, String notificationUrl, String webHookName, String secretToken) {
+        // Not needed for Bitbucket
+        throw new UnsupportedOperationException("Authenticated webhooks with Bitbucket are not supported!");
     }
 
     @Override
@@ -176,22 +169,9 @@ public class BitbucketService implements VersionControlService {
     }
 
     @Override
-    public URL getRepositoryWebUrl(ProgrammingExerciseParticipation participation) {
-        try {
-            return new URL(BITBUCKET_SERVER_URL + "/projects/" + getProjectKeyFromUrl(participation.getRepositoryUrlAsUrl()) + "/repos/"
-                    + getRepositorySlugFromUrl(participation.getRepositoryUrlAsUrl()) + "/browse");
-        }
-        catch (MalformedURLException e) {
-            log.error("Couldn't construct repository web URL");
-        }
-        return BITBUCKET_SERVER_URL;
-    }
-
-    @Override
     public VcsRepositoryUrl getCloneRepositoryUrl(String projectKey, String repositorySlug) {
         final var cloneUrl = new BitbucketRepositoryUrl(projectKey, repositorySlug);
         log.debug("getCloneURL: " + cloneUrl.toString());
-
         return cloneUrl;
     }
 
@@ -301,11 +281,9 @@ public class BitbucketService implements VersionControlService {
     public String getRepositorySlugFromUrl(URL repositoryUrl) throws BitbucketException {
         // https://ga42xab@repobruegge.in.tum.de/scm/EIST2016RME/RMEXERCISE-ga42xab.git
         String[] urlParts = repositoryUrl.getFile().split("/");
-        if (urlParts.length > 3) {
-            String repositorySlug = urlParts[3];
-            if (repositorySlug.endsWith(".git")) {
-                repositorySlug = repositorySlug.substring(0, repositorySlug.length() - 4);
-            }
+        if (urlParts[urlParts.length - 1].endsWith(".git")) {
+            String repositorySlug = urlParts[urlParts.length - 1];
+            repositorySlug = repositorySlug.substring(0, repositorySlug.length() - 4);
             return repositorySlug;
         }
 
@@ -435,7 +413,12 @@ public class BitbucketService implements VersionControlService {
                     else {
                         throw e;
                     }
+
+                    // Try again if there was an exception
+                    continue;
                 }
+                // Don't try again if everything went fine
+                break;
             }
         }
         catch (HttpClientErrorException e) {
@@ -474,7 +457,7 @@ public class BitbucketService implements VersionControlService {
     }
 
     @Override
-    public String checkIfProjectExists(String projectKey, String projectName) {
+    public boolean checkIfProjectExists(String projectKey, String projectName) {
         HttpHeaders headers = HeaderUtil.createAuthorization(BITBUCKET_USER, BITBUCKET_PASSWORD);
         HttpEntity<?> entity = new HttpEntity<>(headers);
         ResponseEntity<Map> response = null;
@@ -482,7 +465,7 @@ public class BitbucketService implements VersionControlService {
             // first check that the project key is unique
             response = restTemplate.exchange(BITBUCKET_SERVER_URL + "/rest/api/1.0/projects/" + projectKey, HttpMethod.GET, entity, Map.class);
             log.warn("Bitbucket project with key " + projectKey + " already exists");
-            return "The project " + projectKey + " already exists in the VCS Server. Please choose a different short name!";
+            return true;
         }
         catch (HttpClientErrorException e) {
             log.debug("Bitbucket project " + projectKey + " does not exit");
@@ -497,14 +480,14 @@ public class BitbucketService implements VersionControlService {
                         String vcsProjectName = (String) ((Map) vcsProject).get("name");
                         if (vcsProjectName.equalsIgnoreCase(projectName)) {
                             log.warn("Bitbucket project with name" + projectName + " already exists");
-                            return "The project " + projectName + " already exists in the VCS Server. Please choose a different title!";
+                            return true;
                         }
                     }
                 }
-                return null;
+                return false;
             }
         }
-        return "The project already exists in the VCS Server. Please choose a different title and short name!";
+        return true;
     }
 
     /**
@@ -537,7 +520,7 @@ public class BitbucketService implements VersionControlService {
 
             if (programmingExercise.getCourse().getTeachingAssistantGroupName() != null && !programmingExercise.getCourse().getTeachingAssistantGroupName().isEmpty()) {
                 grantGroupPermissionToProject(projectKey, programmingExercise.getCourse().getTeachingAssistantGroupName(), "PROJECT_WRITE"); // teachingAssistants get
-                                                                                                                                             // write-permissions
+                // write-permissions
             }
         }
         catch (HttpClientErrorException e) {
@@ -627,7 +610,7 @@ public class BitbucketService implements VersionControlService {
 
         Map<Integer, String> webHooks = new HashMap<>();
 
-        if (response != null && response.getStatusCode().equals(HttpStatus.OK)) {
+        if (response.getStatusCode().equals(HttpStatus.OK)) {
             // TODO: BitBucket uses a pagination API to split up the responses, so we might have to check all pages
             List<Map<String, Object>> rawWebHooks = (List<Map<String, Object>>) response.getBody().get("values");
             for (Map<String, Object> rawWebHook : rawWebHooks) {

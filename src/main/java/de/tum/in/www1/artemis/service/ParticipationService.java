@@ -1,7 +1,6 @@
 
 package de.tum.in.www1.artemis.service;
 
-import static de.tum.in.www1.artemis.config.Constants.PROGRAMMING_SUBMISSION_RESOURCE_API_PATH;
 import static de.tum.in.www1.artemis.domain.enumeration.InitializationState.*;
 
 import java.time.ZonedDateTime;
@@ -11,7 +10,6 @@ import java.util.stream.Collectors;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,9 +39,6 @@ public class ParticipationService {
 
     private final Logger log = LoggerFactory.getLogger(ParticipationService.class);
 
-    @Value("${server.url}")
-    private String ARTEMIS_BASE_URL;
-
     private final ParticipationRepository participationRepository;
 
     private final StudentParticipationRepository studentParticipationRepository;
@@ -68,7 +63,7 @@ public class ParticipationService {
 
     private final UserService userService;
 
-    private final Optional<GitService> gitService;
+    private final GitService gitService;
 
     private final Optional<ContinuousIntegrationService> continuousIntegrationService;
 
@@ -85,9 +80,9 @@ public class ParticipationService {
             SolutionProgrammingExerciseParticipationRepository solutionProgrammingExerciseParticipationRepository, ParticipationRepository participationRepository,
             StudentParticipationRepository studentParticipationRepository, ExerciseRepository exerciseRepository, ResultRepository resultRepository,
             SubmissionRepository submissionRepository, ComplaintResponseRepository complaintResponseRepository, ComplaintRepository complaintRepository,
-            QuizSubmissionService quizSubmissionService, UserService userService, Optional<GitService> gitService,
-            Optional<ContinuousIntegrationService> continuousIntegrationService, Optional<VersionControlService> versionControlService,
-            SimpMessageSendingOperations messagingTemplate, ConflictingResultService conflictingResultService, AuthorizationCheckService authCheckService) {
+            QuizSubmissionService quizSubmissionService, UserService userService, GitService gitService, Optional<ContinuousIntegrationService> continuousIntegrationService,
+            Optional<VersionControlService> versionControlService, SimpMessageSendingOperations messagingTemplate, ConflictingResultService conflictingResultService,
+            AuthorizationCheckService authCheckService) {
         this.participationRepository = participationRepository;
         this.programmingExerciseStudentParticipationRepository = programmingExerciseStudentParticipationRepository;
         this.templateProgrammingExerciseParticipationRepository = templateProgrammingExerciseParticipationRepository;
@@ -183,13 +178,13 @@ public class ParticipationService {
      * repository / build plan related stuff for programming exercises. In the case of modeling or text exercises, it also initializes and stores the corresponding submission.
      *
      * @param exercise the exercise which is started
-     * @param username the name of the user who starts the exercise
+     * @param user the user who starts the exercise
      * @return the participation connecting the given exercise and user
      */
-    public StudentParticipation startExercise(Exercise exercise, String username) {
+    public StudentParticipation startExercise(Exercise exercise, User user) {
         // common for all exercises
         // Check if participation already exists
-        Optional<StudentParticipation> optionalStudentParticipation = findOneByExerciseIdAndStudentLoginAnyState(exercise.getId(), username);
+        Optional<StudentParticipation> optionalStudentParticipation = findOneByExerciseIdAndStudentLoginAnyState(exercise.getId(), user.getLogin());
         StudentParticipation participation;
         if (optionalStudentParticipation.isEmpty()) {
             // create a new participation only if no participation can be found
@@ -201,11 +196,8 @@ public class ParticipationService {
             }
             participation.setInitializationState(UNINITIALIZED);
             participation.setExercise(exercise);
+            participation.setStudent(user);
 
-            Optional<User> user = userService.getUserByLogin(username);
-            if (user.isPresent()) {
-                participation.setStudent(user.get());
-            }
             participation = save(participation);
         }
         else {
@@ -245,13 +237,7 @@ public class ParticipationService {
                 initializeSubmission(participation, exercise);
             }
         }
-
         participation = save(participation);
-
-        if (optionalStudentParticipation.isEmpty()) {
-            // only send a new participation to the client over websocket
-            messagingTemplate.convertAndSendToUser(username, "/topic/exercise/" + exercise.getId() + "/participation", participation);
-        }
 
         return participation;
     }
@@ -458,8 +444,7 @@ public class ParticipationService {
 
     private ProgrammingExerciseStudentParticipation configureRepositoryWebHook(ProgrammingExerciseStudentParticipation participation) {
         if (!participation.getInitializationState().hasCompletedState(InitializationState.INITIALIZED)) {
-            versionControlService.get().addWebHook(participation.getRepositoryUrlAsUrl(), ARTEMIS_BASE_URL + PROGRAMMING_SUBMISSION_RESOURCE_API_PATH + participation.getId(),
-                    "Artemis WebHook");
+            versionControlService.get().addWebHookForParticipation(participation);
         }
         return participation;
     }
@@ -743,7 +728,8 @@ public class ParticipationService {
     public void cleanupBuildPlan(ProgrammingExerciseStudentParticipation participation) {
         // ignore participations without build plan id
         if (participation.getBuildPlanId() != null) {
-            continuousIntegrationService.get().deleteBuildPlan(participation.getBuildPlanId());
+            final var projectKey = ((ProgrammingExercise) participation.getExercise()).getProjectKey();
+            continuousIntegrationService.get().deleteBuildPlan(projectKey, participation.getBuildPlanId());
             participation.setInitializationState(INACTIVE);
             participation.setBuildPlanId(null);
             save(participation);
@@ -773,7 +759,7 @@ public class ParticipationService {
      * @param deleteBuildPlan  determines whether the corresponding build plan should be deleted as well
      * @param deleteRepository determines whether the corresponding repository should be deleted as well
      */
-    @Transactional(noRollbackFor = { Throwable.class })
+    @Transactional
     public void delete(Long participationId, boolean deleteBuildPlan, boolean deleteRepository) {
         StudentParticipation participation = studentParticipationRepository.findWithEagerSubmissionsAndResultsById(participationId).get();
         log.debug("Request to delete Participation : {}", participation);
@@ -781,7 +767,8 @@ public class ParticipationService {
         if (participation instanceof ProgrammingExerciseStudentParticipation) {
             ProgrammingExerciseStudentParticipation programmingExerciseParticipation = (ProgrammingExerciseStudentParticipation) participation;
             if (deleteBuildPlan && programmingExerciseParticipation.getBuildPlanId() != null) {
-                continuousIntegrationService.get().deleteBuildPlan(programmingExerciseParticipation.getBuildPlanId());
+                final var projectKey = programmingExerciseParticipation.getProgrammingExercise().getProjectKey();
+                continuousIntegrationService.get().deleteBuildPlan(projectKey, programmingExerciseParticipation.getBuildPlanId());
             }
             if (deleteRepository && programmingExerciseParticipation.getRepositoryUrl() != null) {
                 try {
@@ -795,7 +782,7 @@ public class ParticipationService {
             // delete local repository cache
             try {
                 if (programmingExerciseParticipation.getRepositoryUrlAsUrl() != null) {
-                    gitService.get().deleteLocalRepository(programmingExerciseParticipation);
+                    gitService.deleteLocalRepository(programmingExerciseParticipation);
                 }
             }
             catch (Exception ex) {

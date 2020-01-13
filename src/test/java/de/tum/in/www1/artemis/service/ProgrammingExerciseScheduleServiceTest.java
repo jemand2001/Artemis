@@ -1,36 +1,29 @@
 package de.tum.in.www1.artemis.service;
 
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Set;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 
+import de.tum.in.www1.artemis.AbstractSpringIntegrationTest;
 import de.tum.in.www1.artemis.domain.ProgrammingExercise;
 import de.tum.in.www1.artemis.domain.participation.ProgrammingExerciseStudentParticipation;
 import de.tum.in.www1.artemis.domain.participation.StudentParticipation;
 import de.tum.in.www1.artemis.repository.ProgrammingExerciseRepository;
-import de.tum.in.www1.artemis.service.connectors.VersionControlService;
 import de.tum.in.www1.artemis.service.scheduled.ProgrammingExerciseScheduleService;
 import de.tum.in.www1.artemis.util.DatabaseUtilService;
 import de.tum.in.www1.artemis.util.TimeService;
 
-@ExtendWith(SpringExtension.class)
-@SpringBootTest
-@AutoConfigureMockMvc
-@AutoConfigureTestDatabase
-@ActiveProfiles("artemis, bitbucket")
-class ProgrammingExerciseScheduleServiceTest {
+class ProgrammingExerciseScheduleServiceTest extends AbstractSpringIntegrationTest {
 
     @Autowired
     ProgrammingExerciseScheduleService programmingExerciseScheduleService;
@@ -38,11 +31,8 @@ class ProgrammingExerciseScheduleServiceTest {
     @Autowired
     ProgrammingExerciseRepository programmingExerciseRepository;
 
-    @MockBean
+    @SpyBean
     ProgrammingSubmissionService programmingSubmissionService;
-
-    @MockBean
-    VersionControlService versionControlService;
 
     @Autowired
     DatabaseUtilService database;
@@ -54,7 +44,7 @@ class ProgrammingExerciseScheduleServiceTest {
 
     // When the scheduler is invoked, there is a small delay until the runnable is called.
     // TODO: This could be improved by e.g. manually setting the system time instead of waiting for actual time to pass.
-    private final long SCHEDULER_TASK_TRIGGER_DELAY_MS = 200;
+    private final long SCHEDULER_TASK_TRIGGER_DELAY_MS = 1200;
 
     @BeforeEach
     void init() {
@@ -77,18 +67,19 @@ class ProgrammingExerciseScheduleServiceTest {
         Set<StudentParticipation> studentParticipations = programmingExercise.getStudentParticipations();
         for (StudentParticipation studentParticipation : studentParticipations) {
             ProgrammingExerciseStudentParticipation programmingExerciseStudentParticipation = (ProgrammingExerciseStudentParticipation) studentParticipation;
-            Mockito.verify(versionControlService, Mockito.times(callCount)).setRepositoryPermissionsToReadOnly(programmingExerciseStudentParticipation.getRepositoryUrlAsUrl(),
+            verify(versionControlService, Mockito.times(callCount)).setRepositoryPermissionsToReadOnly(programmingExerciseStudentParticipation.getRepositoryUrlAsUrl(),
                     programmingExercise.getProjectKey(), programmingExerciseStudentParticipation.getStudent().getLogin());
-            Mockito.verify(versionControlService, Mockito.times(callCount)).setRepositoryPermissionsToReadOnly(programmingExerciseStudentParticipation.getRepositoryUrlAsUrl(),
+            verify(versionControlService, Mockito.times(callCount)).setRepositoryPermissionsToReadOnly(programmingExerciseStudentParticipation.getRepositoryUrlAsUrl(),
                     programmingExercise.getProjectKey(), programmingExerciseStudentParticipation.getStudent().getLogin());
         }
     }
 
     @Test
     void shouldExecuteScheduledBuildAndTestAfterDueDate() throws Exception {
-        long delayMS = 200;
-        programmingExercise.setDueDate(ZonedDateTime.now().plusNanos(timeService.milliSecondsToNanoSeconds(delayMS / 2)));
-        programmingExercise.setBuildAndTestStudentSubmissionsAfterDueDate(ZonedDateTime.now().plusNanos(timeService.milliSecondsToNanoSeconds(delayMS)));
+        long delayMS = 600;
+        final var dueDateDelayMS = 200;
+        programmingExercise.setDueDate(ZonedDateTime.now().plus(dueDateDelayMS / 2, ChronoUnit.MILLIS));
+        programmingExercise.setBuildAndTestStudentSubmissionsAfterDueDate(ZonedDateTime.now().plusNanos(timeService.milliSecondsToNanoSeconds(dueDateDelayMS)));
         programmingExerciseScheduleService.scheduleExerciseIfRequired(programmingExercise);
 
         Thread.sleep(delayMS + SCHEDULER_TASK_TRIGGER_DELAY_MS);
@@ -96,7 +87,7 @@ class ProgrammingExerciseScheduleServiceTest {
         // Lock student repository must be called once per participation.
         verifyLockStudentRepositoryOperation(true);
         // Instructor build should have been triggered.
-        Mockito.verify(programmingSubmissionService, Mockito.times(1)).triggerInstructorBuildForExercise(programmingExercise.getId());
+        verify(programmingSubmissionService, Mockito.times(1)).triggerInstructorBuildForExercise(programmingExercise.getId());
     }
 
     @Test
@@ -109,7 +100,7 @@ class ProgrammingExerciseScheduleServiceTest {
 
         // Lock student repository must be called once per participation.
         verifyLockStudentRepositoryOperation(false);
-        Mockito.verify(programmingSubmissionService, Mockito.never()).triggerInstructorBuildForExercise(programmingExercise.getId());
+        verify(programmingSubmissionService, never()).triggerInstructorBuildForExercise(programmingExercise.getId());
     }
 
     @Test
@@ -120,12 +111,12 @@ class ProgrammingExerciseScheduleServiceTest {
 
         // Lock student repository must be called once per participation.
         verifyLockStudentRepositoryOperation(false);
-        Mockito.verify(programmingSubmissionService, Mockito.never()).triggerInstructorBuildForExercise(programmingExercise.getId());
+        verify(programmingSubmissionService, never()).triggerInstructorBuildForExercise(programmingExercise.getId());
     }
 
     @Test
     void shouldNotExecuteScheduledTwiceIfSameExercise() throws Exception {
-        long delayMS = 200; // 100 ms.
+        long delayMS = 100; // 100 ms.
         programmingExercise.setDueDate(ZonedDateTime.now().plusNanos(timeService.milliSecondsToNanoSeconds(delayMS / 2)));
         // Setting it the first time.
         programmingExercise.setBuildAndTestStudentSubmissionsAfterDueDate(ZonedDateTime.now().plusNanos(timeService.milliSecondsToNanoSeconds(delayMS)));
@@ -139,7 +130,7 @@ class ProgrammingExerciseScheduleServiceTest {
 
         // Lock student repository must be called once per participation.
         verifyLockStudentRepositoryOperation(true);
-        Mockito.verify(programmingSubmissionService, Mockito.times(1)).triggerInstructorBuildForExercise(programmingExercise.getId());
+        verify(programmingSubmissionService, Mockito.times(1)).triggerInstructorBuildForExercise(programmingExercise.getId());
     }
 
     @Test
@@ -156,7 +147,7 @@ class ProgrammingExerciseScheduleServiceTest {
         Thread.sleep(delayMS + SCHEDULER_TASK_TRIGGER_DELAY_MS);
 
         verifyLockStudentRepositoryOperation(false);
-        Mockito.verify(programmingSubmissionService, Mockito.never()).triggerInstructorBuildForExercise(programmingExercise.getId());
+        verify(programmingSubmissionService, never()).triggerInstructorBuildForExercise(programmingExercise.getId());
     }
 
     @Test
@@ -176,6 +167,6 @@ class ProgrammingExerciseScheduleServiceTest {
         Thread.sleep(delayMS + SCHEDULER_TASK_TRIGGER_DELAY_MS);
 
         verifyLockStudentRepositoryOperation(true);
-        Mockito.verify(programmingSubmissionService, Mockito.times(1)).triggerInstructorBuildForExercise(programmingExercise.getId());
+        verify(programmingSubmissionService, Mockito.times(1)).triggerInstructorBuildForExercise(programmingExercise.getId());
     }
 }
