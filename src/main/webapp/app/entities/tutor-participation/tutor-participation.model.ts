@@ -1,6 +1,6 @@
 import { Exercise } from '../exercise';
-import { User } from './../../core';
-import { ExampleSubmission } from '../example-submission/example-submission.model';
+import { User } from 'app/core/user/user.model';
+import { ExampleSubmission } from '../example-submission';
 import { BaseEntity } from 'app/shared';
 
 export const enum TutorParticipationStatus {
