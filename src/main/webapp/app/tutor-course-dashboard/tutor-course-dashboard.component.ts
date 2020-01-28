@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { partition } from 'lodash';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Course } from '../entities/course';
@@ -10,7 +10,7 @@ import { HttpResponse } from '@angular/common/http';
 import { Exercise, getIcon, getIconTooltip } from 'app/entities/exercise/exercise.model';
 import { StatsForDashboard } from 'app/instructor-course-dashboard/stats-for-dashboard.model';
 import { GuidedTourService } from 'app/guided-tour/guided-tour.service';
-import { tutorCourseDashboardTour } from 'app/guided-tour/tours/tutor-dashboard-tour';
+import { tutorAssessmentTour } from 'app/guided-tour/tours/tutor-dashboard-tour';
 
 @Component({
     selector: 'jhi-courses',
@@ -81,8 +81,8 @@ export class TutorCourseDashboardComponent implements OnInit {
                     this.unfinishedExercises = unfinishedExercises;
                     // sort exercises by type to get a better overview in the dashboard
                     this.exercises = this.unfinishedExercises.sort((a, b) => (a.type > b.type ? 1 : b.type > a.type ? -1 : 0));
+                    this.exerciseForGuidedTour = this.guidedTourService.enableTourForCourseExerciseComponent(this.course, tutorAssessmentTour, false);
                 }
-                this.exerciseForGuidedTour = this.guidedTourService.enableTourForCourseExerciseComponent(this.course, tutorCourseDashboardTour);
             },
             (response: string) => this.onError(response),
         );

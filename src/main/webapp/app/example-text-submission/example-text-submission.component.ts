@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { JhiAlertService } from 'ng-jhipster';
 import { WindowRef } from 'app/core/websocket/window.service';
-import { ExampleSubmission } from 'app/entities/example-submission';
+import { ExampleSubmission } from 'app/entities/example-submission/example-submission.model';
 import { ExerciseService } from 'app/entities/exercise';
 import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { TextSubmission, TextSubmissionService } from 'app/entities/text-submission';
@@ -21,6 +21,8 @@ import { ArtemisMarkdown } from 'app/components/util/markdown.service';
 import Interactable from '@interactjs/core/Interactable';
 import interact from 'interactjs';
 import { AccountService } from 'app/core/auth/account.service';
+import { GuidedTourService } from 'app/guided-tour/guided-tour.service';
+import { tutorAssessmentTour } from 'app/guided-tour/tours/tutor-dashboard-tour';
 
 @Component({
     selector: 'jhi-example-text-submission',
@@ -69,6 +71,7 @@ export class ExampleTextSubmissionComponent implements OnInit, AfterViewInit {
         private artemisMarkdown: ArtemisMarkdown,
         private resultService: ResultService,
         private $window: WindowRef,
+        private guidedTourService: GuidedTourService
     ) {}
 
     ngOnInit(): void {
@@ -176,6 +179,7 @@ export class ExampleTextSubmissionComponent implements OnInit, AfterViewInit {
         this.exerciseService.find(this.exerciseId).subscribe((exerciseResponse: HttpResponse<TextExercise>) => {
             this.exercise = exerciseResponse.body!;
             this.isAtLeastInstructor = this.accountService.isAtLeastInstructorInCourse(this.exercise.course!);
+            this.guidedTourService.enableTourForExercise(this.exercise, tutorAssessmentTour, false);
         });
 
         if (this.isNewSubmission) {
@@ -306,6 +310,10 @@ export class ExampleTextSubmissionComponent implements OnInit, AfterViewInit {
         this.totalScore = credits.reduce((a, b) => a! + b!, 0)!;
         this.assessmentsAreValid = true;
         this.invalidError = null;
+
+        if (this.guidedTourService.currentTour) {
+            this.guidedTourService.updateAssessmentResult(this.assessments.length, this.totalScore);
+        }
     }
 
     public saveAssessments(): void {

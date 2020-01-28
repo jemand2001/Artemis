@@ -80,7 +80,7 @@ export class GuidedTourComponent implements AfterViewInit, OnDestroy {
                     this.guidedTourService.skipTour(true, false);
                 } else if (this.currentTourStep && this.guidedTourService.isOnLastStep) {
                     // The escape key event finishes the tour when the user is seeing the cancel tour step or last tour step
-                    this.guidedTourService.finishGuidedTour(false);
+                    this.guidedTourService.finishGuidedTour();
                 }
                 break;
             }
@@ -114,7 +114,7 @@ export class GuidedTourComponent implements AfterViewInit, OnDestroy {
      * Subscribe to guidedTourCurrentStepStream and scroll to set element if the user has the right permission
      */
     public subscribeToGuidedTourCurrentStepStream() {
-        this.guidedTourService.getGuidedTourCurrentStepStream().subscribe((step: TextTourStep | ImageTourStep | VideoTourStep) => {
+        this.guidedTourService.getGuidedTourCurrentStepStream().subscribe(step => {
             this.currentTourStep = step;
             if (!this.currentTourStep) {
                 return;

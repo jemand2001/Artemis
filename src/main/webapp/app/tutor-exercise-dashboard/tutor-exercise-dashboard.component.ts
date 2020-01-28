@@ -18,8 +18,8 @@ import { ComplaintService } from 'app/entities/complaint/complaint.service';
 import { Complaint } from 'app/entities/complaint/complaint.model';
 import { Submission } from 'app/entities/submission/submission.model';
 import { ModelingSubmissionService } from 'app/entities/modeling-submission/modeling-submission.service';
-import { Observable, of, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { StatsForDashboard } from 'app/instructor-course-dashboard/stats-for-dashboard.model';
 import { TranslateService } from '@ngx-translate/core';
 import { FileUploadSubmissionService } from 'app/entities/file-upload-submission/file-upload-submission.service';
@@ -32,8 +32,7 @@ import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { AccountService } from 'app/core/auth/account.service';
 import { cloneDeep } from 'lodash';
 import { GuidedTourService } from 'app/guided-tour/guided-tour.service';
-import { tutorExerciseDashboardTour, tutorReviewExampleSubmissionTour, tutorAssessExampleSubmissionTour } from 'app/guided-tour/tours/tutor-dashboard-tour';
-import { GuidedTourState } from 'app/guided-tour/guided-tour.constants';
+import { tutorAssessmentTour } from 'app/guided-tour/tours/tutor-dashboard-tour';
 
 export interface ExampleSubmissionQueryParams {
     readOnly?: boolean;
@@ -119,7 +118,7 @@ export class TutorExerciseDashboardComponent implements OnInit {
         private complaintService: ComplaintService,
         private programmingSubmissionService: ProgrammingSubmissionService,
         private modalService: NgbModal,
-        private guidedTourService: GuidedTourService,
+        private guidedTourService: GuidedTourService
     ) {}
 
     ngOnInit(): void {
@@ -156,8 +155,10 @@ export class TutorExerciseDashboardComponent implements OnInit {
                         break;
                 }
 
-                this.exerciseForGuidedTour = this.guidedTourService.enableTourForExercise(this.exercise, tutorExerciseDashboardTour);
-                const reviewTourDone =
+                // TODO remove
+
+                this.exerciseForGuidedTour = this.guidedTourService.enableTourForExercise(this.exercise, tutorAssessmentTour, false);
+                /* const reviewTourDone =
                     !this.guidedTourService.checkTourState(tutorAssessExampleSubmissionTour) &&
                     this.guidedTourService.checkTourState(tutorReviewExampleSubmissionTour, GuidedTourState.FINISHED) &&
                     this.guidedTourService.checkTourState(tutorExerciseDashboardTour, GuidedTourState.STARTED);
@@ -168,7 +169,7 @@ export class TutorExerciseDashboardComponent implements OnInit {
                     setTimeout(() => {
                         this.guidedTourService.startTour(tutorExerciseDashboardTour);
                     }, 1000);
-                }
+                }*/
 
                 this.tutorParticipation = this.exercise.tutorParticipations[0];
                 this.tutorParticipationStatus = this.tutorParticipation.status;

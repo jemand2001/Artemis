@@ -6,9 +6,9 @@ import { Course } from './course.model';
 import { CourseService } from './course.service';
 import { ARTEMIS_DEFAULT_COLOR } from 'app/app.constants';
 import { GuidedTourService } from 'app/guided-tour/guided-tour.service';
-import { courseAdministrationTour } from 'app/guided-tour/tours/course-administration-tour';
 import { onError } from 'app/utils/global.utils';
 import { Subject } from 'rxjs';
+import { tutorAssessmentTour } from 'app/guided-tour/tours/tutor-dashboard-tour';
 
 @Component({
     selector: 'jhi-course',
@@ -45,7 +45,7 @@ export class CourseComponent implements OnInit, OnDestroy {
         this.courseService.query().subscribe(
             (res: HttpResponse<Course[]>) => {
                 this.courses = res.body!;
-                this.courseForGuidedTour = this.guidedTourService.enableTourForCourseOverview(this.courses, courseAdministrationTour);
+                this.courseForGuidedTour = this.guidedTourService.enableTourForCourseOverview(this.courses, tutorAssessmentTour, true);
             },
             (res: HttpErrorResponse) => onError(this.jhiAlertService, res),
         );

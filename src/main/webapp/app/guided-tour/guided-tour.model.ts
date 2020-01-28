@@ -16,8 +16,4 @@ export interface GuidedTour {
      * This should only be set if you are completely sure your tour is displaying correctly on all screen sizes otherwise a user can get stuck.
      */
     preventBackdropFromAdvancing?: boolean;
-    /**
-     * Defines whether the last (completed) tour step should be shown
-     */
-    showCompletedTourStep?: boolean;
 }

@@ -3,10 +3,27 @@ import { AssessmentTaskTourStep, TextTourStep, UserInterActionTourStep } from 'a
 import { Orientation, UserInteractionEvent } from 'app/guided-tour/guided-tour.constants';
 import { AssessmentObject, GuidedTourAssessmentTask } from 'app/guided-tour/guided-tour-task.model';
 
-export const tutorCourseDashboardTour: GuidedTour = {
-    settingsKey: 'tutor_course_dashboard_tour',
-    showCompletedTourStep: false,
+export const tutorAssessmentTour: GuidedTour = {
+    settingsKey: 'tutor_assessment_tour',
     steps: [
+        new TextTourStep({
+            highlightSelector: '.exercise-button.guided-tour',
+            headlineTranslateKey: 'tour.courseAdministration.exerciseButton.headline',
+            contentTranslateKey: 'tour.courseAdministration.exerciseButton.content',
+            highlightPadding: 10,
+            orientation: Orientation.LEFT,
+            permission: ['ROLE_TA'],
+        }),
+        new UserInterActionTourStep({
+            highlightSelector: '.tutor-dashboard.guided-tour',
+            headlineTranslateKey: 'tour.courseAdministration.tutorCourseDashboardButton.headline',
+            contentTranslateKey: 'tour.courseAdministration.tutorCourseDashboardButton.content',
+            highlightPadding: 10,
+            orientation: Orientation.LEFT,
+            permission: ['ROLE_TA'],
+            userInteractionEvent: UserInteractionEvent.CLICK,
+        }),
+        // new page
         new TextTourStep({
             highlightSelector: '#assessment-statistics',
             headlineTranslateKey: 'tour.tutorCourseDashboard.overview.headline',
@@ -14,8 +31,9 @@ export const tutorCourseDashboardTour: GuidedTour = {
             highlightPadding: 10,
             orientation: Orientation.TOP,
             permission: ['ROLE_TA'],
+            pageUrl: '/course/(\\d+)+/tutor-dashboard'
         }),
-        new UserInterActionTourStep({
+        new TextTourStep({
             highlightSelector: '.table-responsive .form-check',
             clickEventListenerSelector: '#field_showFinishedExercise',
             headlineTranslateKey: 'tour.tutorCourseDashboard.showFinished.headline',
@@ -23,8 +41,6 @@ export const tutorCourseDashboardTour: GuidedTour = {
             highlightPadding: 10,
             orientation: Orientation.TOPLEFT,
             permission: ['ROLE_TA'],
-            userInteractionEvent: UserInteractionEvent.CLICK,
-            isCheckbox: true,
         }),
         new TextTourStep({
             highlightSelector: '.exercise-table',
@@ -51,12 +67,7 @@ export const tutorCourseDashboardTour: GuidedTour = {
             permission: ['ROLE_TA'],
             userInteractionEvent: UserInteractionEvent.CLICK,
         }),
-    ],
-};
-
-export const tutorExerciseDashboardTour: GuidedTour = {
-    settingsKey: 'tutor_exercise_dashboard_tour',
-    steps: [
+        // new page
         new TextTourStep({
             highlightSelector: '.markdown-preview',
             headlineTranslateKey: 'tour.tutorExerciseDashboard.instructions.headline',
@@ -64,6 +75,7 @@ export const tutorExerciseDashboardTour: GuidedTour = {
             highlightPadding: 10,
             orientation: Orientation.TOP,
             permission: ['ROLE_TA'],
+            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard'
         }),
         new UserInterActionTourStep({
             highlightSelector: '.instructions-button',
@@ -85,36 +97,14 @@ export const tutorExerciseDashboardTour: GuidedTour = {
             userInteractionEvent: UserInteractionEvent.CLICK,
             permission: ['ROLE_TA'],
         }),
-        new UserInterActionTourStep({
-            highlightSelector: '.assess-example-submission.guided-tour',
-            headlineTranslateKey: 'tour.tutorExerciseDashboard.assessExampleSubmission.headline',
-            contentTranslateKey: 'tour.tutorExerciseDashboard.assessExampleSubmission.content',
-            highlightPadding: 10,
-            orientation: Orientation.TOP,
-            userInteractionEvent: UserInteractionEvent.CLICK,
-            permission: ['ROLE_TA'],
-        }),
-        new TextTourStep({
-            highlightSelector: '.d-flex .flex-grow-1',
-            headlineTranslateKey: 'tour.tutorExerciseDashboard.submissionsAndComplaints.headline',
-            contentTranslateKey: 'tour.tutorExerciseDashboard.submissionsAndComplaints.content',
-            highlightPadding: 10,
-            orientation: Orientation.TOP,
-            permission: ['ROLE_TA'],
-        }),
-    ],
-};
-
-export const tutorReviewExampleSubmissionTour: GuidedTour = {
-    settingsKey: 'tutor_review_submission_tour',
-    showCompletedTourStep: false,
-    steps: [
+        // new page
         new TextTourStep({
             highlightSelector: '.col-12 > .row.flex-nowrap',
             headlineTranslateKey: 'tour.exampleReview.reviewSubmission.headline',
             contentTranslateKey: 'tour.exampleReview.reviewSubmission.content',
             orientation: Orientation.TOP,
             permission: ['ROLE_TA'],
+            pageUrl: '/text-exercise/(\\d+)+/example-submission/(\\d+)+'
         }),
         new TextTourStep({
             highlightSelector: '.text-assessments',
@@ -132,13 +122,18 @@ export const tutorReviewExampleSubmissionTour: GuidedTour = {
             highlightPadding: 10,
             permission: ['ROLE_TA'],
         }),
-    ],
-};
-
-export const tutorAssessExampleSubmissionTour: GuidedTour = {
-    settingsKey: 'tutor_assess_submission_tour',
-    showCompletedTourStep: false,
-    steps: [
+        // new page
+        new UserInterActionTourStep({
+            highlightSelector: '.assess-example-submission.guided-tour',
+            headlineTranslateKey: 'tour.tutorExerciseDashboard.assessExampleSubmission.headline',
+            contentTranslateKey: 'tour.tutorExerciseDashboard.assessExampleSubmission.content',
+            highlightPadding: 10,
+            orientation: Orientation.TOP,
+            userInteractionEvent: UserInteractionEvent.CLICK,
+            permission: ['ROLE_TA'],
+            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard'
+        }),
+        // new page
         new AssessmentTaskTourStep({
             highlightSelector: '.col-12 > .row.flex-nowrap',
             headlineTranslateKey: 'tour.exampleAssessment.addAssessment.headline',
@@ -149,6 +144,7 @@ export const tutorAssessExampleSubmissionTour: GuidedTour = {
             userInteractionEvent: UserInteractionEvent.ASSESS_SUBMISSION,
             checkForNextStepSelector: true,
             assessmentTask: new GuidedTourAssessmentTask('tour.exampleAssessment.addAssessment.task', new AssessmentObject(3, 0)),
+            pageUrl: '/text-exercise/(\\d+)+/example-submission/(\\d+)+'
         }),
         new AssessmentTaskTourStep({
             highlightSelector: '.text-assessments .row',
@@ -178,6 +174,16 @@ export const tutorAssessExampleSubmissionTour: GuidedTour = {
             highlightPadding: 10,
             userInteractionEvent: UserInteractionEvent.CLICK,
             permission: ['ROLE_TA'],
+        }),
+        // new page
+        new TextTourStep({
+            highlightSelector: '.d-flex .flex-grow-1',
+            headlineTranslateKey: 'tour.tutorExerciseDashboard.submissionsAndComplaints.headline',
+            contentTranslateKey: 'tour.tutorExerciseDashboard.submissionsAndComplaints.content',
+            highlightPadding: 10,
+            orientation: Orientation.TOP,
+            permission: ['ROLE_TA'],
+            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard'
         }),
     ],
 };

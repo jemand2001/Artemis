@@ -24,6 +24,7 @@ export abstract class TourStep {
     permission?: string[];
     /** Skips this step if the selector is not found, else the setStepAlreadyFinishedHint will be called by the guided tour service */
     skipStepIfNoSelector?: boolean;
+    pageUrl?: string;
 }
 
 export class TextTourStep extends TourStep {
@@ -71,8 +72,6 @@ export class UserInterActionTourStep extends TextTourStep {
     triggerNextStep?: boolean;
     /** Check for next selector*/
     checkForNextStepSelector?: boolean;
-    /** isCheckbox **/
-    isCheckbox?: boolean;
 
     constructor(tourStep: UserInterActionTourStep) {
         super(tourStep);
