@@ -254,7 +254,7 @@ describe('GuidedTourService', () => {
         });
 
         describe('Tours with user interaction', () => {
-            beforeEach( () => {
+            beforeEach(() => {
                 prepareGuidedTour(tourWithUserInteraction);
                 startCourseOverviewTour(tourWithUserInteraction);
             });
