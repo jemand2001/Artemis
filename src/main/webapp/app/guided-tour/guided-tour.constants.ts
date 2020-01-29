@@ -10,7 +10,6 @@ export enum Orientation {
     BOTTOM = 'bottom',
     BOTTOMLEFT = 'bottom-left',
     BOTTOMRIGHT = 'bottom-right',
-    CENTER = 'center',
     LEFT = 'left',
     RIGHT = 'right',
     TOP = 'top',
@@ -37,4 +36,9 @@ export enum UserInteractionEvent {
     CLICK = 'click',
     MODELING = 'modeling',
     WAIT_FOR_SELECTOR = 'wait-for-selector',
+}
+
+export enum Direction {
+    VERTICAL = 'vertical',
+    HORIZONTAL = 'horizontal',
 }

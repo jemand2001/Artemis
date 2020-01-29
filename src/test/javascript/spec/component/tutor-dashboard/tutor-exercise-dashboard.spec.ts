@@ -31,6 +31,7 @@ import { ArtemisSharedComponentModule } from 'app/shared/components/shared-compo
 import { ArtemisProgrammingAssessmentModule } from 'app/programming-assessment/programming-assessment.module';
 import { ArtemisProgrammingExerciseInstructionsRenderModule } from 'app/entities/programming-exercise/instructions/instructions-render';
 import { LocalStorageService, SessionStorageService } from 'ngx-webstorage';
+import { ArtemisAssessmentSharedModule } from 'app/assessment-shared/assessment-shared.module';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { GuidedTourMapping } from 'app/guided-tour/guided-tour-setting.model';
 import { GuidedTourService } from 'app/guided-tour/guided-tour.service';
@@ -61,6 +62,7 @@ describe('TutorExerciseDashboardComponent', () => {
                 ArtemisResultModule,
                 RouterModule,
                 TranslateModule.forRoot(),
+                ArtemisAssessmentSharedModule,
             ],
             declarations: [
                 TutorExerciseDashboardComponent,
