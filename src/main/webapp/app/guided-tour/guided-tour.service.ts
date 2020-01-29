@@ -126,21 +126,17 @@ export class GuidedTourService {
             });
     }
 
-    private checkPageUrl(attempt = 1) {
+    public checkPageUrl(attempt = 1) {
         if (attempt > 20) {
             this.skipTour(false, false);
             this.guidedTourAvailabilitySubject.next(false);
             return;
         }
 
-        if (!this.availableTourForComponent) {
+        if (!this.availableTourForComponent || !this.currentTour) {
             return setTimeout(() => {
                 this.checkPageUrl(attempt + 1);
             }, 300);
-        }
-
-        if (!this.currentTour) {
-            return;
         }
 
         const currentStep = this.currentTour.steps[this.currentTourStepIndex] as UserInterActionTourStep;
@@ -149,9 +145,7 @@ export class GuidedTourService {
         if (currentStep && currentStep.userInteractionEvent && currentStep.userInteractionEvent === UserInteractionEvent.CLICK && nextStep && nextStep.pageUrl) {
             if (this.router.url.match(nextStep.pageUrl)) {
                 this.currentTourStepIndex += 1;
-                setTimeout(() => {
-                    this.setPreparedTourStep();
-                }, 100);
+                this.setPreparedTourStep();
             } else if (this.currentTour) {
                 this.skipTour(false, false);
                 this.guidedTourAvailabilitySubject.next(false);
@@ -795,7 +789,6 @@ export class GuidedTourService {
      * Set the next prepared tour step
      */
     private setPreparedTourStep(): void {
-        // const timeout = this.currentStep && this.currentStep.userInteractionEvent ? 300 : 0;
         setTimeout(() => {
             const preparedTourStep = this.getPreparedTourStep();
             if (preparedTourStep) {

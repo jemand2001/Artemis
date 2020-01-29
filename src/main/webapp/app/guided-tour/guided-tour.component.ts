@@ -7,7 +7,12 @@ import { GuidedTourService } from './guided-tour.service';
 import { AccountService } from 'app/core/auth/account.service';
 import { ImageTourStep, TextTourStep, VideoTourStep } from 'app/guided-tour/guided-tour-step.model';
 import { cancelTour, completedTour } from 'app/guided-tour/tours/general-tour';
-import { calculateLeftOffset, calculateTopOffset, isElementInViewPortHorizontally } from 'app/guided-tour/guided-tour.utils';
+import {
+    calculateLeftOffset,
+    calculateTopOffset,
+    isElementInViewPortHorizontally,
+    islessThanWindowHeight
+} from 'app/guided-tour/guided-tour.utils';
 
 @Component({
     selector: 'jhi-guided-tour',
@@ -273,17 +278,7 @@ export class GuidedTourComponent implements AfterViewInit, OnDestroy {
         if (!this.currentTourStep) {
             return false;
         }
-        switch (direction) {
-            case Direction.HORIZONTAL: {
-                return !this.currentTourStep.highlightSelector || this.elementInViewport(this.getSelectedElement(), direction);
-            }
-            case Direction.VERTICAL: {
-                return !this.currentTourStep.highlightSelector || this.elementInViewport(this.getSelectedElement(), direction);
-            }
-            default: {
-                return false;
-            }
-        }
+        return !this.currentTourStep.highlightSelector || this.elementInViewport(this.getSelectedElement(), direction);
     }
 
     /**
@@ -313,13 +308,14 @@ export class GuidedTourComponent implements AfterViewInit, OnDestroy {
                 const stepScreenAdjustment = this.getStepScreenAdjustment();
                 const top = calculateTopOffset(element);
                 const height = element.offsetHeight;
+                const tourStep = this.tourStep.nativeElement.getBoundingClientRect();
 
                 if (this.isBottom()) {
                     elementInViewPort =
-                        top >= window.pageYOffset + this.topOfPageAdjustment + scrollAdjustment + stepScreenAdjustment && top + height <= window.innerHeight + window.pageYOffset;
+                        top >= window.pageYOffset + this.topOfPageAdjustment + scrollAdjustment + stepScreenAdjustment && islessThanWindowHeight(top + height) && islessThanWindowHeight(tourStep.top + tourStep.height);
                 } else {
                     elementInViewPort =
-                        top >= window.pageYOffset + this.topOfPageAdjustment - stepScreenAdjustment && top + height + scrollAdjustment <= window.innerHeight + window.pageYOffset;
+                        top >= window.pageYOffset + this.topOfPageAdjustment - stepScreenAdjustment && islessThanWindowHeight(top + height + scrollAdjustment) && islessThanWindowHeight(tourStep.top + tourStep.height);
                 }
                 break;
             }
@@ -434,15 +430,25 @@ export class GuidedTourComponent implements AfterViewInit, OnDestroy {
      */
     private getTopScrollingPosition(): number {
         let topPosition = 0;
+        let positionAdjustment = 0;
         if (this.selectedElementRect && this.currentTourStep) {
             const scrollAdjustment = this.currentTourStep.scrollAdjustment ? this.currentTourStep.scrollAdjustment : 0;
             const stepScreenAdjustment = this.getStepScreenAdjustment();
-            const positionAdjustment = this.isBottom()
-                ? -this.topOfPageAdjustment - scrollAdjustment + stepScreenAdjustment - 10
-                : +this.selectedElementRect.height - window.innerHeight + scrollAdjustment - stepScreenAdjustment + 5;
-            topPosition = this.isTop()
-                ? window.scrollY + this.tourStep.nativeElement.getBoundingClientRect().top - 15
-                : window.scrollY + this.selectedElementRect.top + positionAdjustment;
+            const tourStep = this.tourStep.nativeElement.getBoundingClientRect();
+            const totalStepHeight = this.selectedElementRect.height > tourStep.height ? this.selectedElementRect.height : tourStep.height;
+
+            if (this.isBottom()) {
+                positionAdjustment = -this.topOfPageAdjustment - scrollAdjustment + stepScreenAdjustment - 10;
+            } else {
+                positionAdjustment = +totalStepHeight - window.innerHeight + scrollAdjustment - stepScreenAdjustment + 5;
+            }
+
+            if (this.isTop()) {
+                // Scroll to 15px above the tour step
+                topPosition = window.scrollY + tourStep.top - 15;
+            } else {
+                topPosition = window.scrollY + this.selectedElementRect.top + positionAdjustment;
+            }
         }
         return topPosition;
     }

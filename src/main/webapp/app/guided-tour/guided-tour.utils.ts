@@ -74,3 +74,7 @@ export function isElementInViewPortHorizontally(orientation: Orientation, left: 
     }
     return elementInViewPort;
 }
+
+export function islessThanWindowHeight(position: number) {
+    return position < window.innerHeight + window.pageYOffset;
+}
