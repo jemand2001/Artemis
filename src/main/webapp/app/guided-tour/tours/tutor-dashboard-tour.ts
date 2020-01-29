@@ -31,7 +31,7 @@ export const tutorAssessmentTour: GuidedTour = {
             highlightPadding: 10,
             orientation: Orientation.TOP,
             permission: ['ROLE_TA'],
-            pageUrl: '/course/(\\d+)+/tutor-dashboard'
+            pageUrl: '/course/(\\d+)+/tutor-dashboard',
         }),
         new TextTourStep({
             highlightSelector: '.table-responsive .form-check',
@@ -75,7 +75,7 @@ export const tutorAssessmentTour: GuidedTour = {
             highlightPadding: 10,
             orientation: Orientation.TOP,
             permission: ['ROLE_TA'],
-            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard'
+            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard',
         }),
         new UserInterActionTourStep({
             highlightSelector: '.instructions-button',
@@ -104,7 +104,7 @@ export const tutorAssessmentTour: GuidedTour = {
             contentTranslateKey: 'tour.exampleReview.reviewSubmission.content',
             orientation: Orientation.TOP,
             permission: ['ROLE_TA'],
-            pageUrl: '/text-exercise/(\\d+)+/example-submission/(\\d+)+'
+            pageUrl: '/text-exercise/(\\d+)+/example-submission/(\\d+)+',
         }),
         new TextTourStep({
             highlightSelector: '.text-assessments',
@@ -131,7 +131,7 @@ export const tutorAssessmentTour: GuidedTour = {
             orientation: Orientation.TOP,
             userInteractionEvent: UserInteractionEvent.CLICK,
             permission: ['ROLE_TA'],
-            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard'
+            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard',
         }),
         // new page
         new AssessmentTaskTourStep({
@@ -144,7 +144,7 @@ export const tutorAssessmentTour: GuidedTour = {
             userInteractionEvent: UserInteractionEvent.ASSESS_SUBMISSION,
             checkForNextStepSelector: true,
             assessmentTask: new GuidedTourAssessmentTask('tour.exampleAssessment.addAssessment.task', new AssessmentObject(3, 0)),
-            pageUrl: '/text-exercise/(\\d+)+/example-submission/(\\d+)+'
+            pageUrl: '/text-exercise/(\\d+)+/example-submission/(\\d+)+',
         }),
         new AssessmentTaskTourStep({
             highlightSelector: '.text-assessments .row',
@@ -183,7 +183,7 @@ export const tutorAssessmentTour: GuidedTour = {
             highlightPadding: 10,
             orientation: Orientation.TOP,
             permission: ['ROLE_TA'],
-            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard'
+            pageUrl: '/course/(\\d+)+/exercise/(\\d+)+/tutor-dashboard',
         }),
     ],
 };

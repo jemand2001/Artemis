@@ -71,7 +71,7 @@ export class ExampleTextSubmissionComponent implements OnInit, AfterViewInit {
         private artemisMarkdown: ArtemisMarkdown,
         private resultService: ResultService,
         private $window: WindowRef,
-        private guidedTourService: GuidedTourService
+        private guidedTourService: GuidedTourService,
     ) {}
 
     ngOnInit(): void {
@@ -179,7 +179,7 @@ export class ExampleTextSubmissionComponent implements OnInit, AfterViewInit {
         this.exerciseService.find(this.exerciseId).subscribe((exerciseResponse: HttpResponse<TextExercise>) => {
             this.exercise = exerciseResponse.body!;
             this.isAtLeastInstructor = this.accountService.isAtLeastInstructorInCourse(this.exercise.course!);
-            this.guidedTourService.enableTourForExercise(this.exercise, tutorAssessmentTour, false);
+            this.guidedTourService.enableTourForExercise(this.exercise, tutorAssessmentTour);
         });
 
         if (this.isNewSubmission) {

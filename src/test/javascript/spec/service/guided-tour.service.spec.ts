@@ -5,7 +5,7 @@ import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { of, Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { CookieService } from 'ngx-cookie';
 import { LocalStorageService, SessionStorageService } from 'ngx-webstorage';
 import { TranslateService } from '@ngx-translate/core';
@@ -48,7 +48,12 @@ describe('GuidedTourService', () => {
     const tourWithUserInteraction: GuidedTour = {
         settingsKey: 'tour_user_interaction',
         steps: [
-            new UserInterActionTourStep({ highlightSelector: '.random-selector', headlineTranslateKey: '', contentTranslateKey: '', userInteractionEvent: UserInteractionEvent.CLICK }),
+            new UserInterActionTourStep({
+                highlightSelector: '.random-selector',
+                headlineTranslateKey: '',
+                contentTranslateKey: '',
+                userInteractionEvent: UserInteractionEvent.CLICK,
+            }),
             new TextTourStep({ headlineTranslateKey: '', contentTranslateKey: '', orientation: Orientation.TOPLEFT }),
         ],
     };
@@ -63,7 +68,14 @@ describe('GuidedTourService', () => {
 
     const tourWithModelingTask: GuidedTour = {
         settingsKey: 'tour_modeling_task',
-        steps: [new ModelingTaskTourStep({ headlineTranslateKey: '', contentTranslateKey: '', modelingTask: new GuidedTourModelingTask(personUML.name, '') })],
+        steps: [
+            new ModelingTaskTourStep({
+                headlineTranslateKey: '',
+                contentTranslateKey: '',
+                userInteractionEvent: UserInteractionEvent.MODELING,
+                modelingTask: new GuidedTourModelingTask(personUML.name, ''),
+            }),
+        ],
     };
 
     describe('Service method', () => {
@@ -168,6 +180,7 @@ describe('GuidedTourService', () => {
 
         function prepareGuidedTour(tour: GuidedTour) {
             // Prepare GuidedTourService and GuidedTourComponent
+            spyOn<any>(guidedTourComponent, 'isTourOnScreen').and.returnValue(true);
             spyOn(guidedTourService, 'init').and.returnValue(of());
             spyOn(guidedTourService, 'getLastSeenTourStepIndex').and.returnValue(0);
             spyOn<any>(guidedTourService, 'checkSelectorValidity').and.returnValue(true);
@@ -179,17 +192,21 @@ describe('GuidedTourService', () => {
             });
         }
 
-        async function startCourseOverviewTour(tour: GuidedTour) {
+        function startCourseOverviewTour(tour: GuidedTour) {
+            jest.useFakeTimers();
             guidedTourComponent.ngAfterViewInit();
 
-            await guidedTourComponentFixture.ngZone!.run(() => {
+            guidedTourComponentFixture.ngZone!.run(() => {
                 router.navigateByUrl('/overview');
             });
 
             // Start course overview tour
+            jest.advanceTimersByTime(500);
             expect(guidedTourComponentFixture.debugElement.query(By.css('.tour-step'))).to.not.exist;
             guidedTourService['enableTour'](tour);
             guidedTourService['startTour']();
+            jest.advanceTimersByTime(500);
+
             guidedTourComponentFixture.detectChanges();
             expect(guidedTourComponentFixture.debugElement.query(By.css('.tour-step'))).to.exist;
             expect(guidedTourService.isOnFirstStep).to.be.true;
@@ -198,12 +215,12 @@ describe('GuidedTourService', () => {
         }
 
         describe('Tours without user interaction', () => {
-            beforeEach(async () => {
+            beforeEach(() => {
                 prepareGuidedTour(tour);
-                await startCourseOverviewTour(tour);
+                startCourseOverviewTour(tour);
             });
 
-            it('should start and finish the course overview guided tour', async () => {
+            it('should start and finish the course overview guided tour', () => {
                 // Navigate to next step
                 const nextButton = guidedTourComponentFixture.debugElement.query(By.css('.next-button'));
                 expect(nextButton).to.exist;
@@ -237,9 +254,9 @@ describe('GuidedTourService', () => {
         });
 
         describe('Tours with user interaction', () => {
-            beforeEach(async () => {
+            beforeEach( () => {
                 prepareGuidedTour(tourWithUserInteraction);
-                await startCourseOverviewTour(tourWithUserInteraction);
+                startCourseOverviewTour(tourWithUserInteraction);
             });
 
             it('should disable the next button', () => {

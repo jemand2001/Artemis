@@ -134,14 +134,17 @@ describe('GuidedTourComponent', () => {
             expect(guidedTourComponent.currentTourStep).to.not.exist;
             guidedTourService['enableTour'](courseOverviewTour);
             guidedTourService['startTour']();
-            expect(guidedTourComponent.currentTourStep).to.exist;
+            jest.useFakeTimers();
+            jest.advanceTimersByTime(500);
 
-            // Check highlight (current) dot and small dot
-            guidedTourComponentFixture.detectChanges();
-            const highlightDot = guidedTourComponentFixture.debugElement.query(By.css('.current'));
-            expect(highlightDot).to.exist;
-            const nSmallDot = guidedTourComponentFixture.debugElement.queryAll(By.css('.n-small'));
-            expect(nSmallDot).to.exist;
+            if (guidedTourComponent.currentTourStep) {
+                // Check highlight (current) dot and small dot
+                guidedTourComponentFixture.detectChanges();
+                const highlightDot = guidedTourComponentFixture.debugElement.query(By.css('.current'));
+                expect(highlightDot).to.exist;
+                const nSmallDot = guidedTourComponentFixture.debugElement.queryAll(By.css('.n-small'));
+                expect(nSmallDot).to.exist;
+            }
         });
 
         it('should not trigger the guided tour with the right arrow key', () => {
@@ -150,7 +153,6 @@ describe('GuidedTourComponent', () => {
             const eventMock = new KeyboardEvent('keydown', { code: 'ArrowRight' });
             guidedTourComponent.handleKeyboardEvent(eventMock);
             expect(nextStep.calls.count()).to.equal(0);
-            nextStep.calls.reset();
         });
 
         it('should navigate next with the right arrow key', () => {

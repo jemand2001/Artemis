@@ -34,7 +34,7 @@ export class OverviewComponent implements OnInit {
             (res: HttpResponse<Course[]>) => {
                 this.courses = res.body!;
                 this.courseScoreCalculationService.setCourses(this.courses);
-                this.courseForGuidedTour = this.guidedTourService.enableTourForCourseOverview(this.courses, courseOverviewTour, true);
+                this.courseForGuidedTour = this.guidedTourService.enableTourForCourseOverview(this.courses, courseOverviewTour);
             },
             (response: string) => this.onError(response),
         );

@@ -118,7 +118,7 @@ export class TutorExerciseDashboardComponent implements OnInit {
         private complaintService: ComplaintService,
         private programmingSubmissionService: ProgrammingSubmissionService,
         private modalService: NgbModal,
-        private guidedTourService: GuidedTourService
+        private guidedTourService: GuidedTourService,
     ) {}
 
     ngOnInit(): void {
@@ -157,7 +157,7 @@ export class TutorExerciseDashboardComponent implements OnInit {
 
                 // TODO remove
 
-                this.exerciseForGuidedTour = this.guidedTourService.enableTourForExercise(this.exercise, tutorAssessmentTour, false);
+                this.exerciseForGuidedTour = this.guidedTourService.enableTourForExercise(this.exercise, tutorAssessmentTour);
                 /* const reviewTourDone =
                     !this.guidedTourService.checkTourState(tutorAssessExampleSubmissionTour) &&
                     this.guidedTourService.checkTourState(tutorReviewExampleSubmissionTour, GuidedTourState.FINISHED) &&

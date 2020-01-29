@@ -146,9 +146,7 @@ export class GuidedTourService {
         const currentStep = this.currentTour.steps[this.currentTourStepIndex] as UserInterActionTourStep;
         const nextStep = this.currentTour.steps[this.currentTourStepIndex + 1];
 
-        if (currentStep && currentStep.userInteractionEvent && currentStep.userInteractionEvent === UserInteractionEvent.CLICK
-            && nextStep && nextStep.pageUrl) {
-
+        if (currentStep && currentStep.userInteractionEvent && currentStep.userInteractionEvent === UserInteractionEvent.CLICK && nextStep && nextStep.pageUrl) {
             if (this.router.url.match(nextStep.pageUrl)) {
                 this.currentTourStepIndex += 1;
                 setTimeout(() => {
@@ -908,7 +906,7 @@ export class GuidedTourService {
             this.guidedTourAvailabilitySubject.next(true);
             const hasStartedOrFinishedTour = this.checkTourState(guidedTour);
             // Only start tour automatically if the user has never seen it before
-            if (!hasStartedOrFinishedTour && startTour) {
+            if (!hasStartedOrFinishedTour) {
                 this.currentTour = this.availableTourForComponent;
                 this.startTour();
             }
@@ -921,7 +919,7 @@ export class GuidedTourService {
      * @param guidedTour that should be enabled
      * @param startTour
      */
-    public enableTourForCourseExerciseComponent(course: Course | null, guidedTour: GuidedTour, startTour: boolean): Exercise | null {
+    public enableTourForCourseExerciseComponent(course: Course | null, guidedTour: GuidedTour): Exercise | null {
         if (!course || !course.exercises || !this.guidedTourMapping) {
             return null;
         }
@@ -943,7 +941,7 @@ export class GuidedTourService {
      * @param courses which can contain the needed course for the tour
      * @param guidedTour that should be enabled
      */
-    public enableTourForCourseOverview(courses: Course[], guidedTour: GuidedTour, startTour: boolean): Course | null {
+    public enableTourForCourseOverview(courses: Course[], guidedTour: GuidedTour): Course | null {
         if (!this.guidedTourMapping) {
             return null;
         }
@@ -961,7 +959,7 @@ export class GuidedTourService {
      * @param exercise which can contain the needed exercise for the tour
      * @param guidedTour that should be enabled
      */
-    public enableTourForExercise(exercise: Exercise, guidedTour: GuidedTour, startTour: boolean): Exercise | null  {
+    public enableTourForExercise(exercise: Exercise, guidedTour: GuidedTour): Exercise | null {
         if (!exercise.course) {
             return null;
         }
@@ -1121,5 +1119,4 @@ export class GuidedTourService {
         }
         return numberOfAssessmentsCorrect && totalScoreCorrect;
     }
-
 }

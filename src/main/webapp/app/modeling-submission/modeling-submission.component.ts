@@ -135,7 +135,7 @@ export class ModelingSubmissionComponent implements OnInit, OnDestroy, Component
                         }
                         this.setAutoSaveTimer();
                         this.isLoading = false;
-                        this.guidedTourService.enableTourForExercise(this.modelingExercise, modelingTour, true);
+                        this.guidedTourService.enableTourForExercise(this.modelingExercise, modelingTour);
                     },
                     error => {
                         if (error.status === 403) {
